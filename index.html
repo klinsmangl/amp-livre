@@ -1,0 +1,481 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>amp livre</title>
+<meta name="description" content="Controle livre para o amplificador Bluetooth Sinilink XY-AP50L, direto do navegador. Sem app, sem conta, sem nuvem.">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#e6e9ef" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#11111b" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23fab387'/%3E%3Crect x='14.5' y='5' width='3' height='10' rx='1.5' fill='%2311111b'/%3E%3C/svg%3E">
+<style>
+/* Catppuccin Latte / Mocha */
+:root {
+  --bg: #e6e9ef; --card: #eff1f5; --btn: #dce0e8; --line: #ccd0da; --track: #bcc0cc;
+  --text: #4c4f69; --dim: #6c6f85; --accent: #c2410c; --on-accent: #fff; --ok: #40a02b;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #11111b; --card: #1e1e2e; --btn: #313244; --line: #313244; --track: #45475a;
+    --text: #cdd6f4; --dim: #a6adc8; --accent: #fab387; --on-accent: #11111b; --ok: #a6e3a1;
+  }
+}
+* { box-sizing: border-box; margin: 0; }
+[hidden] { display: none !important; }
+body {
+  background: var(--bg); color: var(--text);
+  font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+.wrap { max-width: 440px; margin: 0 auto; padding: 16px 16px 32px; display: grid; gap: 12px; }
+header { display: flex; align-items: center; justify-content: space-between; padding: 4px 4px 0; }
+h1 { font-size: 1.25rem; font-weight: 700; letter-spacing: -.01em; }
+h2 { font-size: .75rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); }
+#panel { display: grid; gap: 12px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; display: grid; gap: 12px; }
+.row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.big { font-size: 1.5rem; font-weight: 650; line-height: 1.2; }
+.num { font-variant-numeric: tabular-nums; }
+.dim { color: var(--dim); }
+.small { font-size: .875rem; }
+
+.pill { display: inline-flex; align-items: center; gap: 6px; font-size: .875rem; color: var(--dim); }
+.pill i { width: 8px; height: 8px; border-radius: 50%; background: var(--track); }
+.pill[data-s="on"] i { background: var(--ok); }
+.pill[data-s="busy"] i { background: var(--accent); animation: pulse .8s infinite alternate; }
+@keyframes pulse { to { opacity: .3; } }
+.msg {
+  position: fixed; z-index: 1; left: 16px; right: 16px; bottom: max(16px, env(safe-area-inset-bottom)); max-width: 408px; margin: 0 auto;
+  background: var(--card); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 10px;
+  padding: 10px 12px; font-size: .9rem; box-shadow: 0 4px 16px rgb(0 0 0 / .25);
+}
+
+button {
+  font: inherit; color: inherit; background: var(--btn); border: 1px solid transparent; border-radius: 10px;
+  min-height: 44px; padding: 0 12px; cursor: pointer; touch-action: manipulation;
+}
+button:active:not(:disabled) { transform: scale(.97); }
+button:disabled { background: var(--btn); color: var(--dim); cursor: not-allowed; }
+button[aria-pressed="true"], .primary, .pp { background: var(--accent); color: var(--on-accent); font-weight: 650; }
+@media (hover: hover) { button:hover:not(:disabled) { border-color: var(--track); } }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.primary { min-height: 52px; font-size: 1.05rem; }
+
+.transport { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.transport button { min-height: 56px; display: grid; place-items: center; }
+.transport svg { width: 26px; height: 26px; fill: currentColor; }
+.pp .i-pause, .pp.playing .i-play { display: none; }
+.pp.playing .i-pause { display: block; }
+
+.vol { display: grid; grid-template-columns: 44px 1fr 44px; gap: 12px; align-items: center; }
+.vol button { padding: 0; font-size: 1.5rem; line-height: 1; }
+input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 44px; background: none; }
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 8px; border-radius: 4px;
+  background: linear-gradient(to right, var(--accent) var(--p, 0%), var(--track) var(--p, 0%));
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; box-sizing: border-box; width: 28px; height: 28px; margin-top: -10px; border-radius: 50%;
+  background: var(--text); border: 4px solid var(--card);
+}
+input[type="range"]::-moz-range-track { height: 8px; border-radius: 4px; background: var(--track); }
+input[type="range"]::-moz-range-progress { height: 8px; border-radius: 4px; background: var(--accent); }
+input[type="range"]::-moz-range-thumb { box-sizing: border-box; width: 28px; height: 28px; border-radius: 50%; background: var(--text); border: 4px solid var(--card); }
+
+.seg { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.seg button { padding: 0; }
+.chips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.chips button { padding: 0 6px; }
+#loop { grid-template-columns: repeat(6, 1fr); }
+#loop > * { grid-column: span 2; }
+#loop > :nth-child(n+4) { grid-column: span 3; }
+
+details.card { display: block; }
+summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; min-height: 24px; }
+summary::-webkit-details-marker { display: none; }
+summary::after {
+  content: ""; width: 7px; height: 7px; margin: 0 4px 4px 0; border: solid var(--dim); border-width: 0 2px 2px 0;
+  transform: rotate(45deg); transition: transform .15s;
+}
+details[open] > summary::after { transform: rotate(-135deg); margin-bottom: -4px; }
+.tag { margin-left: 6px; padding: 2px 6px; border-radius: 6px; background: var(--btn); font-size: .7rem; font-weight: 500; letter-spacing: 0; text-transform: none; }
+.stack { display: grid; gap: 16px; margin-top: 16px; }
+
+#songs {
+  list-style: none; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px;
+  max-height: 50vh; overflow: auto; scrollbar-color: var(--track) transparent;
+}
+#songs button {
+  width: 100%; text-align: left; background: none; border-left: 3px solid transparent; border-radius: 6px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+#songs button[aria-current="true"] { background: var(--btn); border-left-color: var(--accent); font-weight: 600; }
+
+label { font-size: .9rem; }
+.field { display: flex; gap: 8px; margin-top: 6px; }
+.field input {
+  flex: 1; min-width: 0; min-height: 44px; padding: 0 12px; font: inherit; color: inherit;
+  background: var(--bg); border: 1px solid var(--line); border-radius: 10px;
+}
+.hint { display: block; margin-top: 4px; font-size: .8rem; color: var(--dim); }
+.switch { display: flex; align-items: center; justify-content: space-between; min-height: 44px; cursor: pointer; }
+.switch input {
+  -webkit-appearance: none; appearance: none; flex: none; position: relative; width: 44px; height: 26px; margin: 0;
+  border-radius: 13px; background: var(--track); cursor: pointer; transition: background .15s;
+}
+.switch input::after {
+  content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%;
+  background: var(--card); transition: transform .15s;
+}
+.switch input:checked { background: var(--accent); }
+.switch input:checked::after { transform: translateX(18px); }
+
+footer { padding: 4px 8px 0; text-align: center; font-size: .8rem; color: var(--dim); }
+footer a { color: inherit; }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>amp livre</h1>
+    <span id="pill" class="pill" data-s="off"><i></i><span>desconectado</span></span>
+  </header>
+  <p id="msg" class="msg" role="status" hidden></p>
+
+  <section id="intro" class="card">
+    <p>Controle o amplificador Bluetooth <b>Sinilink XY-AP50L</b> pelo navegador. Sem app, sem conta, sem nuvem.</p>
+    <button id="connect" class="primary">Conectar</button>
+    <p id="hint" class="small dim">A placa aceita um controle por vez: feche o app oficial antes.</p>
+  </section>
+
+  <main id="panel" hidden>
+    <section class="card">
+      <div class="row"><span id="src-name" class="big">—</span><span id="state" class="dim small"></span></div>
+      <div class="transport">
+        <button data-cmd="07" aria-label="Anterior"><svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6L18 6v12z"/></svg></button>
+        <button data-cmd="01" id="pp" class="pp" aria-label="Tocar ou pausar">
+          <svg class="i-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+          <svg class="i-pause" viewBox="0 0 24 24"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>
+        </button>
+        <button data-cmd="08" aria-label="Próxima"><svg viewBox="0 0 24 24"><path d="M16 6h2v12h-2zM6 18V6l8.5 6z"/></svg></button>
+        <button data-cmd="02" aria-label="Parar"><svg viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg></button>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="row"><h2>Volume</h2><output id="vol-out" class="big num">—</output></div>
+      <div class="vol">
+        <button id="vol-dn" aria-label="Diminuir volume">−</button>
+        <input id="vol" type="range" min="0" max="30" value="0" aria-label="Volume">
+        <button id="vol-up" aria-label="Aumentar volume">+</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Entrada</h2>
+      <div id="src" class="seg">
+        <button data-cmd="14">BT</button><button data-cmd="16">AUX</button><button data-cmd="04">USB</button><button data-cmd="03">SD</button><button data-cmd="15">PC</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Equalizador</h2>
+      <div id="eq" class="chips">
+        <button data-cmd="09">Normal</button><button data-cmd="0a">Rock</button><button data-cmd="0b">Pop</button>
+        <button data-cmd="0c">Clássico</button><button data-cmd="0d">Jazz</button><button data-cmd="0e">Country</button>
+      </div>
+    </section>
+
+    <section id="loop-card" class="card" hidden>
+      <h2>Repetição</h2>
+      <div id="loop" class="chips">
+        <button data-cmd="0f">Todas</button><button data-cmd="13">Em ordem</button><button data-cmd="12">Aleatório</button>
+        <button data-cmd="11">Repetir uma</button><button data-cmd="10">Uma só</button>
+      </div>
+    </section>
+
+    <details id="songs-card" class="card" hidden>
+      <summary><h2>Músicas<span class="tag">experimental</span></h2></summary>
+      <div class="stack">
+        <ol id="songs"></ol>
+        <p id="songs-info" class="small dim" hidden></p>
+        <button id="songs-more">Carregar lista</button>
+      </div>
+    </details>
+
+    <details class="card">
+      <summary><h2>Ajustes</h2></summary>
+      <div class="stack">
+        <form id="name-form">
+          <label for="name">Nome Bluetooth</label>
+          <div class="field">
+            <input id="name" maxlength="10" pattern="\w{1,10}" required autocomplete="off" autocapitalize="off" spellcheck="false">
+            <button>Salvar</button>
+          </div>
+          <span class="hint">Até 10 letras ou números, sem espaço.</span>
+        </form>
+        <form id="pin-form">
+          <label for="pin">PIN de pareamento</label>
+          <div class="field">
+            <input id="pin" inputmode="numeric" maxlength="4" pattern="\d{4}" required autocomplete="off">
+            <button>Salvar</button>
+          </div>
+          <span class="hint">4 dígitos.</span>
+        </form>
+        <div>
+          <label class="switch">Exigir PIN ao parear <input id="pin-on" type="checkbox"></label>
+          <label class="switch">Som de aviso <input id="prompt" type="checkbox"></label>
+        </div>
+        <div class="row small"><span class="dim">Firmware <span id="fw">—</span></span><button id="disconnect">Desconectar</button></div>
+      </div>
+    </details>
+  </main>
+
+  <footer>Projeto independente, sem relação com a Sinilink. Nada sai do seu aparelho além do Bluetooth. <a href="https://github.com/klinsmangl/amp-livre">Código</a></footer>
+</div>
+
+<script type="module">
+const $ = s => document.querySelector(s);
+const SRC = { 0x03: 'Cartão SD', 0x04: 'Pendrive', 0x14: 'Bluetooth', 0x15: 'PC', 0x16: 'AUX', 0x17: 'PC' };
+const st = {};
+const songs = new Map();
+let dev, ctl, wanted = false, volAt = 0, list = 'idle', sayT;
+
+// quadro: 7E <tamanho total> <dados> <soma16 hi> <soma16 lo>, soma de todos os bytes anteriores
+function frame(data) {
+  const f = [0x7e, data.length + 4, ...data];
+  const s = f.reduce((a, b) => a + b);
+  return Uint8Array.of(...f, s >> 8 & 255, s & 255);
+}
+// comandos longos: código + 10 bytes completados com 00
+const pad = (c, data) => [c, ...data, ...Array(10 - data.length).fill(0)];
+const enc = s => Array.from(s, ch => ch.charCodeAt(0));
+const ascii = b => String.fromCharCode(...b).split('\0')[0];
+const hex = b => Array.from(b, x => x.toString(16).padStart(2, '0')).join('');
+const bytes = v => new Uint8Array(v.buffer, v.byteOffset, v.byteLength);
+
+// GATT aceita uma operação por vez; mesma chave substitui a pendente (arrastar o volume)
+const jobs = new Map();
+let busy = false;
+async function run(key, job) {
+  jobs.set(key, job);
+  if (busy) return;
+  busy = true;
+  while (jobs.size && ctl) {
+    const [k, j] = jobs.entries().next().value;
+    jobs.delete(k);
+    try { await j(); } catch (e) { say('Falhou: ' + e.message); }
+  }
+  busy = false;
+}
+const send = (data, key = Symbol()) => run(key, () => ctl.writeValueWithResponse(frame(data)));
+// ler o ae10 devolve o status e faz a placa notificar status, ajustes e nome
+const refresh = () => run('read', async () => handle(bytes(await ctl.readValue())));
+
+function handle(f) {
+  const n = f[1], c = f[2];
+  if (n === 0x0b || (n === 0x0f && /^V\d{3}$/.test(ascii(f.subarray(9, 13))))) {
+    // status: [4] entrada [5] estado [6] volume [7] repetição [8] EQ [9..12] firmware
+    set({ src: f[4], playing: f[5] === 2, vol: f[6], loop: f[7], eq: f[8], ...(n === 0x0f && { fw: ascii(f.subarray(9, 13)) }) });
+  } else if (n === 0x10 && c === 0x1f) {
+    set({ prompt: f[3] === 1, pinOn: f[4] === 1, vol: f[5], pin: ascii(f.subarray(6, 10)) });
+    if (f[10] === 1) say('PIN salvo.');
+  } else if (n === 0x10 && c === 0x20) {
+    set({ name: ascii(f.subarray(3, 13)) });
+    if (f[13] === 1) say('Nome salvo.');
+  } else if (n === 0x09 && c === 0x1e) set({ fw: ascii(f.subarray(3, 7)) });
+  else if (n === 0x0e && c === 0x23) set({ song: hex(f.subarray(3, 7)) });
+  else if (n === 0x09 && (c === 0x22 || c === 0x27)) { list = c === 0x22 ? 'done' : 'more'; drawList(); }
+  else if (n > 17 && f[12] === 0) addSong(f);
+}
+
+// música: [7..10] id; [13] ≠ 0 → nome em UTF-16LE a partir de [14], senão ASCII
+function addSong(f) {
+  const id = hex(f.subarray(7, 11));
+  if (songs.has(id)) return;
+  const raw = f.subarray(14, f[1] - 2);
+  const name = (f[13] ? new TextDecoder('utf-16le').decode(raw) : ascii(raw)).split('\0')[0].trim() || id;
+  songs.set(id, name);
+  const b = document.createElement('button');
+  b.dataset.id = id;
+  b.textContent = name;
+  b.setAttribute('aria-current', id === st.song);
+  $('#songs').append(document.createElement('li'));
+  $('#songs').lastChild.append(b);
+  drawList();
+}
+
+function drawList() {
+  $('#songs-more').hidden = list === 'done';
+  $('#songs-more').textContent = songs.size ? 'Carregar mais' : 'Carregar lista';
+  $('#songs-info').hidden = list === 'idle' || list === 'more';
+  $('#songs-info').textContent = list === 'loading' ? 'Carregando…' : `${songs.size} músicas`;
+}
+
+function set(p) {
+  if ('src' in p && p.src !== st.src) {
+    songs.clear();
+    $('#songs').replaceChildren();
+    list = 'idle';
+    drawList();
+  }
+  Object.assign(st, p);
+  render();
+}
+
+function render() {
+  $('#src-name').textContent = SRC[st.src] ?? '—';
+  $('#state').textContent = st.src == null ? '' : st.playing ? 'tocando' : 'parado';
+  $('#pp').classList.toggle('playing', !!st.playing);
+  if (st.vol != null && Date.now() - volAt > 1000) showVol(st.vol);
+  press('#src', st.src === 0x17 ? 0x15 : st.src);
+  press('#eq', st.eq);
+  press('#loop', st.loop);
+  $('#loop-card').hidden = $('#songs-card').hidden = !(st.src === 0x03 || st.src === 0x04);
+  if (document.activeElement !== $('#name')) $('#name').value = st.name ?? '';
+  if (document.activeElement !== $('#pin')) $('#pin').value = st.pin ?? '';
+  $('#pin-on').checked = !!st.pinOn;
+  $('#prompt').checked = !!st.prompt;
+  $('#fw').textContent = st.fw?.replace(/^V(\d)(\d)(\d)$/, '$1.$2.$3') ?? '—';
+  for (const b of $('#songs').querySelectorAll('button')) b.setAttribute('aria-current', b.dataset.id === st.song);
+}
+
+function press(sel, v) {
+  for (const b of $(sel).children) b.setAttribute('aria-pressed', parseInt(b.dataset.cmd, 16) === v);
+}
+
+const vol = $('#vol');
+function showVol(v) {
+  vol.value = v;
+  $('#vol-out').textContent = v;
+  vol.style.setProperty('--p', v / 30 * 100 + '%');
+}
+function setVol(v) {
+  v = Math.max(0, Math.min(30, v));
+  showVol(v);
+  volAt = Date.now();
+  send(pad(0x1d, [v]), 'vol');
+}
+
+function pill(s, text) {
+  $('#pill').dataset.s = s;
+  $('#pill span').textContent = text;
+}
+function show(on) {
+  $('#panel').hidden = !on;
+  $('#intro').hidden = on;
+  pill(on ? 'on' : 'off', on ? 'conectado' : 'desconectado');
+}
+function say(text) {
+  $('#msg').textContent = text;
+  $('#msg').hidden = false;
+  clearTimeout(sayT);
+  sayT = setTimeout(() => $('#msg').hidden = true, 5000);
+}
+
+const pick = () => navigator.bluetooth.requestDevice({
+  filters: [{ namePrefix: 'Sinilink' }, { services: [0xae00] }],
+  optionalServices: [0xae00],
+});
+
+async function connect() {
+  if ($('#pill').dataset.s === 'busy') return;
+  pill('busy', 'conectando…');
+  try {
+    dev ??= await pick();
+    dev.ongattserverdisconnected = dropped;
+    const svc = await (await dev.gatt.connect()).getPrimaryService(0xae00);
+    const ntf = await svc.getCharacteristic(0xae04);
+    ntf.oncharacteristicvaluechanged = e => {
+      // uma notificação pode trazer mais de um quadro
+      const b = bytes(e.target.value);
+      for (let i = 0; b[i] === 0x7e && b[i + 1] >= 5 && i + b[i + 1] <= b.length; i += b[i + 1]) handle(b.subarray(i, i + b[i + 1]));
+    };
+    await ntf.startNotifications();
+    ctl = await svc.getCharacteristic(0xae10);
+    wanted = true;
+    show(true);
+    refresh();
+  } catch (e) {
+    show(false);
+    if (e.name === 'NotFoundError' && !dev) return; // lista cancelada
+    wanted = false;
+    dev?.gatt.disconnect();
+    dev = null; // a próxima tentativa abre a lista de novo
+    say('Não conectou: ' + e.message);
+  }
+}
+
+function dropped() {
+  ctl = null;
+  jobs.clear();
+  show(false);
+  if (!wanted) return;
+  say('A conexão caiu. Tentando de novo…');
+  setTimeout(() => wanted && !ctl && dev && connect(), 1000);
+}
+
+if (navigator.bluetooth) {
+  $('#connect').onclick = connect;
+} else {
+  $('#connect').disabled = true;
+  $('#hint').textContent = 'Este navegador não tem Web Bluetooth. Use Chrome ou Edge no Android, Windows ou macOS (no iPhone, o app Bluefy).';
+}
+
+$('#disconnect').onclick = () => {
+  wanted = false;
+  dev?.gatt.disconnect();
+};
+
+$('#panel').addEventListener('click', e => {
+  const b = e.target.closest('[data-cmd]');
+  if (!b) return;
+  const c = parseInt(b.dataset.cmd, 16);
+  if (b.parentElement.id) set({ [b.parentElement.id]: c });
+  send([c]);
+  setTimeout(refresh, 400);
+});
+
+vol.oninput = () => setVol(+vol.value);
+$('#vol-dn').onclick = () => setVol(+vol.value - 1);
+$('#vol-up').onclick = () => setVol(+vol.value + 1);
+
+$('#songs').onclick = e => {
+  const id = e.target.closest('button')?.dataset.id;
+  if (!id) return;
+  set({ song: id });
+  send(pad(0x23, id.match(/../g).map(h => parseInt(h, 16))));
+};
+$('#songs-more').onclick = () => {
+  const first = !songs.size;
+  list = 'loading';
+  drawList();
+  send([0x21, 0, first ? 1 : 0, 0, 0]); // 1ª página: 00 01; próximas: 00 00
+};
+
+$('#name-form').onsubmit = e => {
+  e.preventDefault();
+  send(pad(0x1a, enc($('#name').value)));
+  send([0x20]);
+  document.activeElement.blur();
+};
+$('#pin-form').onsubmit = e => {
+  e.preventDefault();
+  send(pad(0x1b, enc($('#pin').value)));
+  send([0x1f]);
+  document.activeElement.blur();
+};
+// 18 e 19 alternam; o 1F de volta confirma o estado real
+$('#pin-on').onchange = () => { send([0x19]); send([0x1f]); };
+$('#prompt').onchange = () => { send([0x18]); send([0x1f]); };
+
+document.onvisibilitychange = () => {
+  if (document.hidden || !wanted) return;
+  if (ctl) refresh();
+  else if (dev) connect();
+};
+</script>
+</body>
+</html>
