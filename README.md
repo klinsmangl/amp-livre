@@ -12,6 +12,7 @@ Controle pelo navegador para o amplificador Bluetooth **Sinilink XY-AP50L** (pla
 - modo de repetição e lista de músicas do pendrive/cartão (experimental)
 - nome Bluetooth, PIN de pareamento, som de aviso
 - mostra o estado da placa e a versão do firmware
+- visualizador: anima enquanto toca; com o microfone ligado (opcional), segue o som de verdade
 
 ## Onde funciona
 
@@ -26,7 +27,7 @@ A placa aceita um controle por vez: feche o app oficial antes de conectar.
 
 ## Privacidade
 
-É uma página estática: um único `index.html`, sem bibliotecas nem chamadas externas. Nada vai para a internet; a conversa é só entre o navegador e a placa, pelo Bluetooth.
+É uma página estática: um único `index.html`, sem bibliotecas nem chamadas externas. Nada vai para a internet; a conversa é só entre o navegador e a placa, pelo Bluetooth. O microfone, se você ligar, só alimenta o visualizador: o som é medido no aparelho e não é gravado nem enviado.
 
 ---
 

@@ -6,19 +6,25 @@
 <title>amp livre</title>
 <meta name="description" content="Controle livre para o amplificador Bluetooth Sinilink XY-AP50L, direto do navegador. Sem app, sem conta, sem nuvem.">
 <meta name="color-scheme" content="light dark">
-<meta name="theme-color" content="#e6e9ef" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#eff1f5" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#11111b" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23fab387'/%3E%3Crect x='14.5' y='5' width='3' height='10' rx='1.5' fill='%2311111b'/%3E%3C/svg%3E">
 <style>
-/* Catppuccin Latte / Mocha */
+/* Catppuccin Latte / Mocha; cartões de vidro sobre as cores do visualizador */
 :root {
-  --bg: #e6e9ef; --card: #eff1f5; --btn: #dce0e8; --line: #ccd0da; --track: #bcc0cc;
+  --bg: #eff1f5; --card: #eff1f5; --glass: rgb(255 255 255 / .5); --line: rgb(255 255 255 / .8); --hi: rgb(255 255 255 / .9);
+  --btn: rgb(255 255 255 / .55); --track: rgb(76 79 105 / .16); --shadow: rgb(76 79 105 / .25);
   --text: #4c4f69; --dim: #6c6f85; --accent: #c2410c; --on-accent: #fff; --ok: #40a02b;
+  --grad: linear-gradient(135deg, #c2410c, #d20f39 55%, #8839ef);
+  --v1: #fe640b; --v2: #e64553; --v3: #ea76cb; --v4: #8839ef; --v5: #1e66f5; --blob: .4;
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #11111b; --card: #1e1e2e; --btn: #313244; --line: #313244; --track: #45475a;
+    --bg: #11111b; --card: #1e1e2e; --glass: rgb(30 30 46 / .55); --line: rgb(255 255 255 / .08); --hi: rgb(255 255 255 / .1);
+    --btn: rgb(255 255 255 / .07); --track: rgb(255 255 255 / .14); --shadow: rgb(0 0 0 / .5);
     --text: #cdd6f4; --dim: #a6adc8; --accent: #fab387; --on-accent: #11111b; --ok: #a6e3a1;
+    --grad: linear-gradient(135deg, #fab387, #f5c2e7 55%, #cba6f7);
+    --v1: #fab387; --v2: #f38ba8; --v3: #f5c2e7; --v4: #cba6f7; --v5: #89dceb; --blob: .45;
   }
 }
 * { box-sizing: border-box; margin: 0; }
@@ -28,60 +34,95 @@ body {
   font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   -webkit-tap-highlight-color: transparent;
 }
+/* fundo: graves, médios e agudos crescem com o som (--l0..2 vêm do visualizador) */
+#bg { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+#bg i {
+  position: absolute; width: 80vmax; height: 80vmax; margin: -40vmax 0 0 -40vmax; border-radius: 50%;
+  background: radial-gradient(closest-side, var(--c), transparent);
+  opacity: calc(var(--blob) * (.6 + var(--l, 0) * .8)); scale: calc(.8 + var(--l, 0) * .4);
+  animation: drift 31s ease-in-out infinite alternate;
+}
+#bg i:nth-child(1) { --c: var(--v1); --l: var(--l0); left: 10%; top: 90%; }
+#bg i:nth-child(2) { --c: var(--v4); --l: var(--l1); left: 95%; top: 25%; animation-duration: 37s; animation-delay: -11s; }
+#bg i:nth-child(3) { --c: var(--v5); --l: var(--l2); left: 25%; top: 35%; animation-duration: 43s; animation-delay: -23s; }
+@keyframes drift { to { translate: 14vw -12vh; } }
+
 .wrap { max-width: 440px; margin: 0 auto; padding: 16px 16px 32px; display: grid; gap: 12px; }
 header { display: flex; align-items: center; justify-content: space-between; padding: 4px 4px 0; }
-h1 { font-size: 1.25rem; font-weight: 700; letter-spacing: -.01em; }
+h1 { font-size: 1.35rem; font-weight: 800; letter-spacing: -.02em; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
 h2 { font-size: .75rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); }
 #panel { display: grid; gap: 12px; }
-.card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; display: grid; gap: 12px; }
+.card, .pill, .msg {
+  background: var(--glass); border: 1px solid var(--line);
+  -webkit-backdrop-filter: blur(22px) saturate(1.6); backdrop-filter: blur(22px) saturate(1.6);
+}
+.card { border-radius: 22px; padding: 16px; display: grid; gap: 12px; box-shadow: inset 0 1px 0 var(--hi), 0 12px 32px -18px var(--shadow); }
+@media (prefers-reduced-transparency: reduce) { .card, .pill, .msg { background: var(--card); -webkit-backdrop-filter: none; backdrop-filter: none; } }
 .row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .big { font-size: 1.5rem; font-weight: 650; line-height: 1.2; }
 .num { font-variant-numeric: tabular-nums; }
 .dim { color: var(--dim); }
 .small { font-size: .875rem; }
 
-.pill { display: inline-flex; align-items: center; gap: 6px; font-size: .875rem; color: var(--dim); }
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 99px; font-size: .875rem; color: var(--dim); }
 .pill i { width: 8px; height: 8px; border-radius: 50%; background: var(--track); }
-.pill[data-s="on"] i { background: var(--ok); }
+.pill[data-s="on"] i { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
 .pill[data-s="busy"] i { background: var(--accent); animation: pulse .8s infinite alternate; }
 @keyframes pulse { to { opacity: .3; } }
 .msg {
   position: fixed; z-index: 1; left: 16px; right: 16px; bottom: max(16px, env(safe-area-inset-bottom)); max-width: 408px; margin: 0 auto;
-  background: var(--card); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 10px;
-  padding: 10px 12px; font-size: .9rem; box-shadow: 0 4px 16px rgb(0 0 0 / .25);
+  border-left: 3px solid var(--accent); border-radius: 12px; padding: 10px 12px; font-size: .9rem;
+  box-shadow: 0 8px 24px rgb(0 0 0 / .25); pointer-events: none; /* não engole toques nos botões de baixo */
 }
 
 button {
-  font: inherit; color: inherit; background: var(--btn); border: 1px solid transparent; border-radius: 10px;
-  min-height: 44px; padding: 0 12px; cursor: pointer; touch-action: manipulation;
+  font: inherit; color: inherit; background: var(--btn); border: 1px solid var(--line); border-radius: 14px;
+  min-height: 44px; padding: 0 12px; cursor: pointer; touch-action: manipulation; transition: transform .12s, box-shadow .2s;
 }
-button:active:not(:disabled) { transform: scale(.97); }
-button:disabled { background: var(--btn); color: var(--dim); cursor: not-allowed; }
-button[aria-pressed="true"], .primary, .pp { background: var(--accent); color: var(--on-accent); font-weight: 650; }
+button:active:not(:disabled) { transform: scale(.94); }
+button:disabled { color: var(--dim); cursor: not-allowed; opacity: .55; }
 @media (hover: hover) { button:hover:not(:disabled) { border-color: var(--track); } }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .primary { min-height: 52px; font-size: 1.05rem; }
 
-.transport { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-.transport button { min-height: 56px; display: grid; place-items: center; }
-.transport svg { width: 26px; height: 26px; fill: currentColor; }
+.hero { gap: 14px; box-shadow: inset 0 1px 0 var(--hi), 0 12px 32px -18px var(--shadow), 0 0 calc(var(--beat, 0) * 40px) -12px var(--accent); }
+.badge { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; padding: 3px 10px 3px 8px; border-radius: 99px; background: var(--btn); font-size: .8rem; color: var(--dim); }
+.badge i { display: flex; align-items: flex-end; gap: 2px; height: 10px; }
+.badge b { width: 3px; height: 100%; border-radius: 1px; background: currentColor; transform-origin: bottom; transform: scaleY(.3); }
+.badge[data-on="true"] { background: var(--grad); color: var(--on-accent); font-weight: 600; }
+.badge[data-on="true"] b { animation: eqb .8s ease-in-out infinite alternate; }
+.badge b:nth-child(2) { animation-delay: -.27s; }
+.badge b:nth-child(3) { animation-delay: -.53s; }
+@keyframes eqb { to { transform: scaleY(1); } }
+#viz { display: block; width: 100%; height: 96px; }
+
+.transport { display: grid; grid-template-columns: repeat(5, 1fr); align-items: center; justify-items: center; }
+.transport button { width: 52px; height: 52px; min-height: 0; padding: 0; border-radius: 50%; display: grid; place-items: center; }
+.transport svg { width: 24px; height: 24px; fill: currentColor; }
+.transport .side { width: 44px; height: 44px; }
+.transport .side svg { width: 20px; height: 20px; }
+.transport .side:not([aria-pressed="true"]) { color: var(--dim); }
+.transport .pp { width: 76px; height: 76px; border: 0; box-shadow: 0 10px 28px -10px var(--accent), 0 0 calc(var(--beat, 0) * 32px) color-mix(in srgb, var(--accent) 70%, transparent); }
+.transport .pp svg { width: 34px; height: 34px; }
 .pp .i-pause, .pp.playing .i-play { display: none; }
 .pp.playing .i-pause { display: block; }
+button[aria-pressed="true"], .primary, .transport .pp { background: var(--grad); color: var(--on-accent); font-weight: 650; border-color: transparent; }
+button[aria-pressed="true"], .primary { box-shadow: 0 6px 18px -8px var(--accent); }
 
 .vol { display: grid; grid-template-columns: 44px 1fr 44px; gap: 12px; align-items: center; }
-.vol button { padding: 0; font-size: 1.5rem; line-height: 1; }
+.vol button { padding: 0; font-size: 1.5rem; line-height: 1; border-radius: 50%; }
 input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 44px; background: none; }
 input[type="range"]::-webkit-slider-runnable-track {
-  height: 8px; border-radius: 4px;
-  background: linear-gradient(to right, var(--accent) var(--p, 0%), var(--track) var(--p, 0%));
+  height: 10px; border-radius: 5px;
+  background: linear-gradient(to right, var(--v1), var(--v3), var(--v5)) 0 0 / var(--p, 0%) 100% no-repeat, var(--track);
 }
 input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none; box-sizing: border-box; width: 28px; height: 28px; margin-top: -10px; border-radius: 50%;
-  background: var(--text); border: 4px solid var(--card);
+  -webkit-appearance: none; box-sizing: border-box; width: 28px; height: 28px; margin-top: -9px; border-radius: 50%;
+  background: #fff; border: 0; box-shadow: 0 2px 10px rgb(0 0 0 / .3);
 }
-input[type="range"]::-moz-range-track { height: 8px; border-radius: 4px; background: var(--track); }
-input[type="range"]::-moz-range-progress { height: 8px; border-radius: 4px; background: var(--accent); }
-input[type="range"]::-moz-range-thumb { box-sizing: border-box; width: 28px; height: 28px; border-radius: 50%; background: var(--text); border: 4px solid var(--card); }
+input[type="range"]::-moz-range-track { height: 10px; border-radius: 5px; background: var(--track); }
+input[type="range"]::-moz-range-progress { height: 10px; border-radius: 5px; background: linear-gradient(to right, var(--v1), var(--v3), var(--v5)); }
+input[type="range"]::-moz-range-thumb { box-sizing: border-box; width: 28px; height: 28px; border-radius: 50%; background: #fff; border: 0; box-shadow: 0 2px 10px rgb(0 0 0 / .3); }
 
 .seg { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
 .seg button { padding: 0; }
@@ -92,7 +133,8 @@ input[type="range"]::-moz-range-thumb { box-sizing: border-box; width: 28px; hei
 #loop > :nth-child(n+4) { grid-column: span 3; }
 
 details.card { display: block; }
-summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; min-height: 24px; }
+summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 8px; min-height: 24px; }
+summary h2 { margin-right: auto; }
 summary::-webkit-details-marker { display: none; }
 summary::after {
   content: ""; width: 7px; height: 7px; margin: 0 4px 4px 0; border: solid var(--dim); border-width: 0 2px 2px 0;
@@ -107,7 +149,7 @@ details[open] > summary::after { transform: rotate(-135deg); margin-bottom: -4px
   max-height: 50vh; overflow: auto; scrollbar-color: var(--track) transparent;
 }
 #songs button {
-  width: 100%; text-align: left; background: none; border-left: 3px solid transparent; border-radius: 6px;
+  width: 100%; text-align: left; background: none; border: 0; border-left: 3px solid transparent; border-radius: 8px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 #songs button[aria-current="true"] { background: var(--btn); border-left-color: var(--accent); font-weight: 600; }
@@ -116,20 +158,21 @@ label { font-size: .9rem; }
 .field { display: flex; gap: 8px; margin-top: 6px; }
 .field input {
   flex: 1; min-width: 0; min-height: 44px; padding: 0 12px; font: inherit; color: inherit;
-  background: var(--bg); border: 1px solid var(--line); border-radius: 10px;
+  background: var(--btn); border: 1px solid var(--line); border-radius: 14px;
 }
 .hint { display: block; margin-top: 4px; font-size: .8rem; color: var(--dim); }
 .switch { display: flex; align-items: center; justify-content: space-between; min-height: 44px; cursor: pointer; }
 .switch input {
   -webkit-appearance: none; appearance: none; flex: none; position: relative; width: 44px; height: 26px; margin: 0;
-  border-radius: 13px; background: var(--track); cursor: pointer; transition: background .15s;
+  border-radius: 13px; background: var(--track); cursor: pointer;
 }
 .switch input::after {
   content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%;
-  background: var(--card); transition: transform .15s;
+  background: #fff; box-shadow: 0 1px 4px rgb(0 0 0 / .25); transition: transform .15s;
 }
-.switch input:checked { background: var(--accent); }
+.switch input:checked { background: var(--grad); }
 .switch input:checked::after { transform: translateX(18px); }
+.switch input:disabled, input[type="range"]:disabled { opacity: .4; cursor: not-allowed; }
 
 footer { padding: 4px 8px 0; text-align: center; font-size: .8rem; color: var(--dim); }
 footer a { color: inherit; }
@@ -137,6 +180,7 @@ footer a { color: inherit; }
 </style>
 </head>
 <body>
+<div id="bg" aria-hidden="true"><i></i><i></i><i></i></div>
 <div class="wrap">
   <header>
     <h1>amp livre</h1>
@@ -151,25 +195,30 @@ footer a { color: inherit; }
   </section>
 
   <main id="panel" hidden>
-    <section class="card">
-      <div class="row"><span id="src-name" class="big">—</span><span id="state" class="dim small"></span></div>
+    <section id="hero" class="card hero">
+      <div>
+        <div id="src-name" class="big">—</div>
+        <span id="state" class="badge" hidden><i aria-hidden="true"><b></b><b></b><b></b></i><span id="state-t"></span></span>
+      </div>
+      <canvas id="viz" aria-hidden="true"></canvas>
       <div class="transport">
+        <button data-cmd="02" class="side" aria-label="Parar"><svg viewBox="0 0 24 24"><path d="M7 7h10v10H7z"/></svg></button>
         <button data-cmd="07" aria-label="Anterior"><svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6L18 6v12z"/></svg></button>
         <button data-cmd="01" id="pp" class="pp" aria-label="Tocar ou pausar">
           <svg class="i-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
           <svg class="i-pause" viewBox="0 0 24 24"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>
         </button>
         <button data-cmd="08" aria-label="Próxima"><svg viewBox="0 0 24 24"><path d="M16 6h2v12h-2zM6 18V6l8.5 6z"/></svg></button>
-        <button data-cmd="02" aria-label="Parar"><svg viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg></button>
+        <button id="mic" class="side" aria-pressed="false" aria-label="Visualizador pelo microfone" title="O visualizador segue o som pelo microfone. Nada é gravado nem enviado."><svg viewBox="0 0 24 24"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11z"/></svg></button>
       </div>
     </section>
 
     <section class="card">
       <div class="row"><h2>Volume</h2><output id="vol-out" class="big num">—</output></div>
       <div class="vol">
-        <button id="vol-dn" aria-label="Diminuir volume">−</button>
-        <input id="vol" type="range" min="0" max="30" value="0" aria-label="Volume">
-        <button id="vol-up" aria-label="Aumentar volume">+</button>
+        <button id="vol-dn" aria-label="Diminuir volume" disabled>−</button>
+        <input id="vol" type="range" min="0" max="30" value="0" aria-label="Volume" disabled>
+        <button id="vol-up" aria-label="Aumentar volume" disabled>+</button>
       </div>
     </section>
 
@@ -177,14 +226,6 @@ footer a { color: inherit; }
       <h2>Entrada</h2>
       <div id="src" class="seg">
         <button data-cmd="14">BT</button><button data-cmd="16">AUX</button><button data-cmd="04">USB</button><button data-cmd="03">SD</button><button data-cmd="15">PC</button>
-      </div>
-    </section>
-
-    <section class="card">
-      <h2>Equalizador</h2>
-      <div id="eq" class="chips">
-        <button data-cmd="09">Normal</button><button data-cmd="0a">Rock</button><button data-cmd="0b">Pop</button>
-        <button data-cmd="0c">Clássico</button><button data-cmd="0d">Jazz</button><button data-cmd="0e">Country</button>
       </div>
     </section>
 
@@ -202,6 +243,16 @@ footer a { color: inherit; }
         <ol id="songs"></ol>
         <p id="songs-info" class="small dim" hidden></p>
         <button id="songs-more">Carregar lista</button>
+      </div>
+    </details>
+
+    <details class="card">
+      <summary><h2>Equalizador</h2><span id="eq-name" class="small dim"></span></summary>
+      <div class="stack">
+        <div id="eq" class="chips">
+          <button data-cmd="09">Normal</button><button data-cmd="0a">Rock</button><button data-cmd="0b">Pop</button>
+          <button data-cmd="0c">Clássico</button><button data-cmd="0d">Jazz</button><button data-cmd="0e">Country</button>
+        </div>
       </div>
     </details>
 
@@ -225,8 +276,8 @@ footer a { color: inherit; }
           <span class="hint">4 dígitos.</span>
         </form>
         <div>
-          <label class="switch">Exigir PIN ao parear <input id="pin-on" type="checkbox"></label>
-          <label class="switch">Som de aviso <input id="prompt" type="checkbox"></label>
+          <label class="switch">Exigir PIN ao parear <input id="pin-on" type="checkbox" disabled></label>
+          <label class="switch">Som de aviso <input id="prompt" type="checkbox" disabled></label>
         </div>
         <div class="row small"><span class="dim">Firmware <span id="fw">—</span></span><button id="disconnect">Desconectar</button></div>
       </div>
@@ -241,7 +292,7 @@ const $ = s => document.querySelector(s);
 const SRC = { 0x03: 'Cartão SD', 0x04: 'Pendrive', 0x14: 'Bluetooth', 0x15: 'PC', 0x16: 'AUX', 0x17: 'PC' };
 const st = {};
 const songs = new Map();
-let dev, ctl, wanted = false, volAt = 0, list = 'idle', sayT;
+let dev, ctl, wanted = false, connecting = false, volAt = 0, list = 'idle', listT, sayT;
 
 // quadro: 7E <tamanho total> <dados> <soma16 hi> <soma16 lo>, soma de todos os bytes anteriores
 function frame(data) {
@@ -287,12 +338,16 @@ function handle(f) {
     if (f[13] === 1) say('Nome salvo.');
   } else if (n === 0x09 && c === 0x1e) set({ fw: ascii(f.subarray(3, 7)) });
   else if (n === 0x0e && c === 0x23) set({ song: hex(f.subarray(3, 7)) });
-  else if (n === 0x09 && (c === 0x22 || c === 0x27)) { list = c === 0x22 ? 'done' : 'more'; drawList(); }
-  else if (n > 17 && f[12] === 0) addSong(f);
+  else if (list === 'loading') {
+    // só durante um pedido: quadros atrasados da fonte anterior ficam de fora
+    if (n === 0x09 && (c === 0x22 || c === 0x27)) { list = c === 0x22 ? 'done' : 'more'; drawList(); }
+    else if (n > 17 && f[12] === 0) addSong(f);
+  }
 }
 
 // música: [7..10] id; [13] ≠ 0 → nome em UTF-16LE a partir de [14], senão ASCII
 function addSong(f) {
+  listWait();
   const id = hex(f.subarray(7, 11));
   if (songs.has(id)) return;
   const raw = f.subarray(14, f[1] - 2);
@@ -309,17 +364,32 @@ function addSong(f) {
 
 function drawList() {
   $('#songs-more').hidden = list === 'done';
+  $('#songs-more').disabled = list === 'loading'; // um pedido por vez
   $('#songs-more').textContent = songs.size ? 'Carregar mais' : 'Carregar lista';
   $('#songs-info').hidden = list === 'idle' || list === 'more';
   $('#songs-info').textContent = list === 'loading' ? 'Carregando…' : `${songs.size} músicas`;
 }
+function clearList() {
+  songs.clear();
+  $('#songs').replaceChildren();
+  list = 'idle';
+  drawList();
+}
+// placa calada (sem mídia, firmware): libera o botão de novo
+function listWait() {
+  clearTimeout(listT);
+  listT = setTimeout(() => {
+    if (list !== 'loading') return;
+    list = songs.size ? 'more' : 'idle';
+    drawList();
+    if (!songs.size) say('A placa não mandou a lista.');
+  }, 4000);
+}
 
 function set(p) {
   if ('src' in p && p.src !== st.src) {
-    songs.clear();
-    $('#songs').replaceChildren();
-    list = 'idle';
-    drawList();
+    clearList();
+    st.song = undefined; // o ID da faixa é por fonte
   }
   Object.assign(st, p);
   render();
@@ -327,23 +397,36 @@ function set(p) {
 
 function render() {
   $('#src-name').textContent = SRC[st.src] ?? '—';
-  $('#state').textContent = st.src == null ? '' : st.playing ? 'tocando' : 'parado';
+  $('#state').hidden = st.src == null;
+  $('#state').dataset.on = !!st.playing;
+  $('#state-t').textContent = st.playing ? 'tocando' : 'parado';
   $('#pp').classList.toggle('playing', !!st.playing);
   if (st.vol != null && Date.now() - volAt > 1000) showVol(st.vol);
   press('#src', st.src === 0x17 ? 0x15 : st.src);
-  press('#eq', st.eq);
+  $('#eq-name').textContent = press('#eq', st.eq)?.textContent ?? '';
   press('#loop', st.loop);
   $('#loop-card').hidden = $('#songs-card').hidden = !(st.src === 0x03 || st.src === 0x04);
   if (document.activeElement !== $('#name')) $('#name').value = st.name ?? '';
   if (document.activeElement !== $('#pin')) $('#pin').value = st.pin ?? '';
   $('#pin-on').checked = !!st.pinOn;
   $('#prompt').checked = !!st.prompt;
+  // 18/19 alternam e o volume é relativo ao slider: sem o estado real, o toque faria o contrário
+  $('#pin-on').disabled = st.pinOn == null;
+  $('#prompt').disabled = st.prompt == null;
+  for (const el of [vol, $('#vol-dn'), $('#vol-up')]) el.disabled = st.vol == null;
   $('#fw').textContent = st.fw?.replace(/^V(\d)(\d)(\d)$/, '$1.$2.$3') ?? '—';
   for (const b of $('#songs').querySelectorAll('button')) b.setAttribute('aria-current', b.dataset.id === st.song);
+  wake();
 }
 
 function press(sel, v) {
-  for (const b of $(sel).children) b.setAttribute('aria-pressed', parseInt(b.dataset.cmd, 16) === v);
+  let on;
+  for (const b of $(sel).children) {
+    const p = parseInt(b.dataset.cmd, 16) === v;
+    b.setAttribute('aria-pressed', p);
+    if (p) on = b;
+  }
+  return on;
 }
 
 const vol = $('#vol');
@@ -354,6 +437,7 @@ function showVol(v) {
 }
 function setVol(v) {
   v = Math.max(0, Math.min(30, v));
+  st.vol = v; // se a placa não confirmar o 1D, o próximo render não volta o valor antigo
   showVol(v);
   volAt = Date.now();
   send(pad(0x1d, [v]), 'vol');
@@ -367,6 +451,7 @@ function show(on) {
   $('#panel').hidden = !on;
   $('#intro').hidden = on;
   pill(on ? 'on' : 'off', on ? 'conectado' : 'desconectado');
+  if (!on) { micWanted = false; micOff(); }
 }
 function say(text) {
   $('#msg').textContent = text;
@@ -375,16 +460,121 @@ function say(text) {
   sayT = setTimeout(() => $('#msg').hidden = true, 5000);
 }
 
+// visualizador: decorativo enquanto toca; com o microfone, segue o som da sala (só mede, nada sai do aparelho)
+const viz = $('#viz'), g = viz.getContext('2d'), calm = matchMedia('(prefers-reduced-motion: reduce)');
+const bgStyle = $('#bg').style, heroStyle = $('#hero').style;
+let lv = new Float32Array(0), grad, raf = 0, last = 0, beat = 0, beatAt = 0, avg = 0, mic, micWanted = false;
+
+function fit() {
+  const w = viz.clientWidth, dpr = devicePixelRatio || 1;
+  if (!w) return;
+  viz.width = w * dpr;
+  viz.height = viz.clientHeight * dpr;
+  lv = new Float32Array(Math.max(16, Math.min(40, Math.floor(w / 11))));
+  grad = g.createLinearGradient(0, 0, viz.width, 0);
+  const cs = getComputedStyle(viz);
+  for (let i = 1; i <= 5; i++) grad.addColorStop((i - 1) / 4, cs.getPropertyValue('--v' + i).trim());
+  draw();
+}
+new ResizeObserver(fit).observe(viz);
+matchMedia('(prefers-color-scheme: dark)').onchange = fit;
+
+function draw() {
+  const W = viz.width, H = viz.height, n = lv.length, step = W / n, bw = step * .62;
+  g.clearRect(0, 0, W, H);
+  g.fillStyle = grad;
+  g.beginPath();
+  for (let i = 0; i < n; i++) {
+    const h = bw + lv[i] * (H - bw); // em silêncio: uma fileira de pontos
+    g.roundRect(i * step + (step - bw) / 2, (H - h) / 2, bw, h, bw / 2);
+  }
+  g.fill();
+}
+// decorativo: grave mais forte, batida a 120 bpm, ondulação lenta em cada barra
+function fake(t, i, x) {
+  const kick = Math.max(0, 1 - t % 500 / 150);
+  const wave = .5 + .5 * Math.sin(t / (240 + 60 * (i % 5)) + i * 2.1) * Math.sin(t / 1900 + i * .7);
+  return Math.min(1, (.75 - .45 * x) * (.25 + .6 * wave) + kick * Math.max(0, .6 - x * 2.2));
+}
+// microfone: barras em escala log de 40 Hz a 12 kHz
+function heard(i, n) {
+  const { an, buf } = mic, hz = an.context.sampleRate / an.fftSize;
+  const lo = Math.floor(40 * 300 ** (i / n) / hz), hi = Math.max(lo + 1, Math.floor(40 * 300 ** ((i + 1) / n) / hz));
+  let m = 0;
+  for (let k = lo; k < hi; k++) m = Math.max(m, buf[k]);
+  return (m / 255) ** 1.6;
+}
+const party = () => !!ctl && st.playing && !calm.matches;
+function wake() {
+  if (!raf && !document.hidden && lv.length) raf = requestAnimationFrame(tick);
+}
+function tick(t) {
+  raf = 0;
+  if (t - last >= 33) { // ~30 quadros/s: o vidro refaz o desfoque a cada quadro
+    last = t;
+    const n = lv.length, fun = party(), third = [0, 0, 0];
+    if (mic) mic.an.getByteFrequencyData(mic.buf);
+    for (let i = 0; i < n; i++) {
+      const v = mic ? heard(i, n) : fun ? fake(t, i, i / n) : 0;
+      lv[i] += (v - lv[i]) * (v > lv[i] ? .6 : .15);
+      third[Math.floor(i * 3 / n)] += lv[i] * 3 / n;
+    }
+    // batida: grave acima da média recente
+    if (third[0] > avg * 1.3 && third[0] > .25 && t - beatAt > 280) { beat = 1; beatAt = t; } else beat *= .85;
+    avg += (third[0] - avg) * .05;
+    draw();
+    third.forEach((l, k) => bgStyle.setProperty('--l' + k, l.toFixed(3)));
+    heroStyle.setProperty('--beat', beat.toFixed(3));
+  }
+  if (mic || party() || beat > .01 || lv.some(v => v > .005)) raf = requestAnimationFrame(tick);
+}
+
+async function micOn() {
+  const ctx = new AudioContext(); // criado ainda no toque: o navegador deixa o áudio rodar
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+    if (!micWanted || mic) { stream.getTracks().forEach(t => t.stop()); ctx.close(); return; } // desligado enquanto pedia
+    const an = Object.assign(ctx.createAnalyser(), { fftSize: 2048, smoothingTimeConstant: .6, minDecibels: -90, maxDecibels: -20 });
+    ctx.createMediaStreamSource(stream).connect(an); // não vai para a saída: só mede
+    ctx.resume();
+    mic = { ctx, stream, an, buf: new Uint8Array(an.frequencyBinCount) };
+    wake();
+  } catch (e) {
+    ctx.close();
+    micWanted = false;
+    micOff();
+    say('Sem microfone: ' + e.message);
+  }
+}
+function micOff() {
+  mic?.stream.getTracks().forEach(t => t.stop());
+  mic?.ctx.close();
+  mic = null;
+  $('#mic').setAttribute('aria-pressed', micWanted);
+}
+$('#mic').onclick = () => {
+  micWanted = !micWanted;
+  if (!micWanted) return micOff();
+  $('#mic').setAttribute('aria-pressed', true);
+  say('Microfone ligado: o visualizador segue o som. Nada é gravado nem enviado.');
+  micOn();
+};
+
 const pick = () => navigator.bluetooth.requestDevice({
   filters: [{ namePrefix: 'Sinilink' }, { services: [0xae00] }],
   optionalServices: [0xae00],
 });
 
 async function connect() {
-  if ($('#pill').dataset.s === 'busy') return;
+  if (connecting) return; // trava própria: dropped() muda a pílula no meio da conexão
+  connecting = true;
   pill('busy', 'conectando…');
   try {
-    dev ??= await pick();
+    if (!dev) {
+      dev = await pick();
+      for (const k in st) delete st[k]; // pode ser outra placa
+      render();
+    }
     dev.ongattserverdisconnected = dropped;
     const svc = await (await dev.gatt.connect()).getPrimaryService(0xae00);
     const ntf = await svc.getCharacteristic(0xae04);
@@ -400,17 +590,21 @@ async function connect() {
     refresh();
   } catch (e) {
     show(false);
-    if (e.name === 'NotFoundError' && !dev) return; // lista cancelada
+    // cancelar a lista é NotFoundError, mas sem adaptador ou permissão também: só o cancelar fica mudo
+    if (e.name === 'NotFoundError' && !dev && /cancel/i.test(e.message)) return;
     wanted = false;
     dev?.gatt.disconnect();
     dev = null; // a próxima tentativa abre a lista de novo
     say('Não conectou: ' + e.message);
+  } finally {
+    connecting = false;
   }
 }
 
 function dropped() {
   ctl = null;
   jobs.clear();
+  if (list === 'loading') clearList(); // página pela metade: recomeça do zero
   show(false);
   if (!wanted) return;
   say('A conexão caiu. Tentando de novo…');
@@ -433,7 +627,9 @@ $('#panel').addEventListener('click', e => {
   const b = e.target.closest('[data-cmd]');
   if (!b) return;
   const c = parseInt(b.dataset.cmd, 16);
-  if (b.parentElement.id) set({ [b.parentElement.id]: c });
+  const k = b.parentElement.id;
+  // a fonte pode ser recusada (sem cartão, pendrive ou cabo): essa espera a placa confirmar
+  if (k === 'eq' || k === 'loop') set({ [k]: c });
   send([c]);
   setTimeout(refresh, 400);
 });
@@ -452,6 +648,7 @@ $('#songs-more').onclick = () => {
   const first = !songs.size;
   list = 'loading';
   drawList();
+  listWait();
   send([0x21, 0, first ? 1 : 0, 0, 0]); // 1ª página: 00 01; próximas: 00 00
 };
 
@@ -472,7 +669,10 @@ $('#pin-on').onchange = () => { send([0x19]); send([0x1f]); };
 $('#prompt').onchange = () => { send([0x18]); send([0x1f]); };
 
 document.onvisibilitychange = () => {
-  if (document.hidden || !wanted) return;
+  if (document.hidden) return micOff(); // em segundo plano o microfone desliga; volta junto com a página
+  if (micWanted && !mic) micOn();
+  wake();
+  if (!wanted) return;
   if (ctl) refresh();
   else if (dev) connect();
 };
