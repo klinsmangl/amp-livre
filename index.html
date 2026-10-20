@@ -8,6 +8,7 @@
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#eff1f5" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#11111b" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23fab387'/%3E%3Crect x='14.5' y='5' width='3' height='10' rx='1.5' fill='%2311111b'/%3E%3C/svg%3E">
 <style>
 /* Catppuccin Latte / Mocha; cartões de vidro sobre as cores do visualizador */
@@ -192,6 +193,7 @@ footer a { color: inherit; }
     <p>Controle o amplificador Bluetooth <b>Sinilink XY-AP50L</b> pelo navegador. Sem app, sem conta, sem nuvem.</p>
     <button id="connect" class="primary">Conectar</button>
     <p id="hint" class="small dim">A placa aceita um controle por vez: feche o app oficial antes.</p>
+    <button id="install" hidden>Instalar como app</button>
   </section>
 
   <main id="panel" hidden>
@@ -676,6 +678,12 @@ document.onvisibilitychange = () => {
   if (ctl) refresh();
   else if (dev) connect();
 };
+
+// Chrome só oferece instalar quando o site tem manifest; o botão aparece nesse momento
+let installEv;
+addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEv = e; $('#install').hidden = false; });
+$('#install').onclick = () => installEv?.prompt();
+addEventListener('appinstalled', () => $('#install').hidden = true);
 </script>
 </body>
 </html>
